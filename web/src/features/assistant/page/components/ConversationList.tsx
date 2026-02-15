@@ -1,4 +1,4 @@
-import { Plus, PanelLeftClose, PanelLeft, Trash2 } from "lucide-react";
+import { Plus, PanelLeftClose, PanelLeft, Trash2, Loader2 } from "lucide-react";
 import { cn } from "@/src/utils/tailwind";
 import { Button } from "@/src/components/ui/button";
 import {
@@ -15,6 +15,7 @@ import { useState } from "react";
 interface ConversationListProps {
   conversations: { id: string; title: string | null; startedAt: Date }[];
   currentConversationId?: string;
+  isLoading?: boolean;
   onSelectConversation: (id: string) => void;
   onNewConversation: () => void;
   onDeleteConversation: (id: string) => void;
@@ -23,6 +24,7 @@ interface ConversationListProps {
 export function ConversationList({
   conversations,
   currentConversationId,
+  isLoading,
   onSelectConversation,
   onNewConversation,
   onDeleteConversation,
@@ -40,7 +42,7 @@ export function ConversationList({
       {!isCollapsed && (
         <div
           className="fixed inset-0 z-20 bg-black/50 md:hidden"
-          onClick={() => setIsCollapsed(false)}
+          onClick={() => setIsCollapsed(true)}
           aria-hidden="true"
         />
       )}
@@ -87,7 +89,14 @@ export function ConversationList({
               className="flex-1 overflow-y-auto px-2 pb-4"
               aria-label="Conversation history"
             >
-              {conversations.length === 0 ? (
+              {isLoading ? (
+                <div className="flex justify-center p-4">
+                  <Loader2
+                    className="h-5 w-5 animate-spin text-muted-foreground"
+                    aria-label="Loading conversations"
+                  />
+                </div>
+              ) : conversations.length === 0 ? (
                 <p className="p-4 text-center text-sm text-muted-foreground">
                   No conversations yet
                 </p>

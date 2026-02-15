@@ -65,6 +65,7 @@ export default function AssistantPage() {
         <ConversationList
           conversations={conversations}
           currentConversationId={currentConversationId}
+          isLoading={isLoadingConversations}
           onSelectConversation={handleSelectConversation}
           onNewConversation={handleNewConversation}
           onDeleteConversation={handleDeleteConversation}

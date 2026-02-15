@@ -81,3 +81,5 @@ web/test-results/*
 
 # Refactoring planning files (local only)
 **/.refactor/
+
+INTERVIEW_PREP.md

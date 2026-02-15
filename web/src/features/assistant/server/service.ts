@@ -4,6 +4,8 @@ import {
   ChatMessageType,
   type ChatMessage,
 } from "@langfuse/shared/src/server";
+import { fetchAssistantResponse } from "./llmClient";
+import { generateTitle } from "@/src/features/assistant/utils";
 
 export async function listConversations({
   projectId,
@@ -81,9 +83,6 @@ export async function deleteConversation({
   return { success: true };
 }
 
-import { fetchAssistantResponse } from "./llmClient";
-import { generateTitle } from "@/src/features/assistant/utils";
-
 export async function prepareAssistantRequest({
   conversationId,
   projectId,
@@ -95,7 +94,7 @@ export async function prepareAssistantRequest({
   userId: string;
   content: string;
 }) {
-  const conversation = await getOrCreteConversation(
+  const conversation = await getOrCreateConversation(
     projectId,
     userId,
     generateTitle(content),
@@ -183,7 +182,7 @@ export async function ask({
   };
 }
 
-async function getOrCreteConversation(
+async function getOrCreateConversation(
   projectId: string,
   userId: string,
   title: string,

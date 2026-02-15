@@ -6,7 +6,7 @@ A ChatGPT-style "Assistant" page integrated into Langfuse, allowing users to hav
 
 - **Chat UI**: Full conversational interface with message history, conversation list sidebar, and markdown rendering
 - **Conversation Management**: Create, switch between, and delete conversations
-- **LLM Integration**: Uses the project's configured LLM API keys (from Project Settings) to call models
+- **LLM Integration**: Uses the project's configured LLM Connections (from Project Settings) to call models
 - **Automatic Tracing**: Every LLM call is traced in Langfuse using `traceSinkParams`, visible in the project's Tracing view
 - **Persistence**: Conversations and messages are stored in PostgreSQL via Prisma
 
@@ -98,7 +98,8 @@ This is **not** Server-Sent Events (SSE). There is no `text/event-stream` conten
 | `web/src/app/api/assistant/chat/route.ts` | App Router streaming endpoint |
 | `web/src/features/assistant/server/llmClient.ts` | `streamAssistantResponse()` — streaming LLM call |
 | `web/src/features/assistant/server/service.ts` | `prepareAssistantRequest()` / `saveAssistantResponse()` — DB operations |
-| `web/src/features/assistant/page/hooks/useAssistantStreamMessages.ts` | Frontend hook consuming the stream |
+| `web/src/features/assistant/page/hooks/useAssistantChat.ts` | Frontend hook: `fetchStreamingResponse()` + `sendMessageWithStreaming()` |
+| `web/src/features/assistant/page/hooks/useOptimisticMessages.ts` | Shared optimistic message state, deduplication, and assistant indicator |
 
 **Pattern reuse:** This follows the same approach as the playground's streaming (`web/src/app/api/chatCompletion/route.ts` + `getChatCompletionStream` in the playground context).
 
@@ -110,65 +111,64 @@ The diagram below shows the full lifecycle of sending a message. The left column
  BROWSER                                          SERVER
  ───────                                          ──────
 
- useAssistantChat.sendMessage()
+ useAssistantChat.send()
   ├─ guard: empty input / isSending
   ├─ clear text input
-  ├─ addOptimisticMessage(content)
+  ├─ isSending = true
+  ├─ addOptimisticMessage(content)        (useOptimisticMessages)
   │   └─ user message renders instantly
   │
-  ▼
- useAssistantStreamMessages.sendMessage()
-  ├─ isSending = true
-  ├─ streamingContent = ""
-  │   └─ empty assistant bubble renders
-  │
-  ├─ POST /api/assistant/chat ───────────────────► route.ts
-  │   { projectId, conversationId?, content }       ├─ authorizeRequestOrThrow()
-  │                                                 ├─ Zod v4 body validation
-  │                                                 │
-  │                                                 ├─ prepareAssistantRequest()
-  │                                                 │   ├─ [new conv] CREATE Conversation
-  │                                                 │   ├─ [existing] verify ownership
-  │                                                 │   ├─ CREATE ConversationMessage (user)
-  │                                                 │   └─ build ChatMessage[] history
-  │                                                 │
-  │                                                 ├─ streamAssistantResponse()
-  │                                                 │   ├─ lookup LLM API key
-  │                                                 │   └─ fetchLLMCompletion(streaming: true)
-  │                                                 │       └─ auto-traced via traceSinkParams
-  │                                                 │
-  │                                                 ├─ pipe through TransformStream
-  │                                                 │   (captures full text for DB save)
-  │                                                 │
-  │  ◄──────── StreamingTextResponse ───────────────┤
-  │            headers: x-conversation-id            │
-  │                                                  │
-  ├─ read x-conversation-id header                   │
-  ├─ [new conv] onConversationId callback            │
-  │   ├─ URL updates (?conversationId=...)           │
-  │   ├─ list.invalidate() → sidebar shows conv      │
-  │   └─ byId query enables → fetches user msg       │
-  │       └─ optimistic msg deduplicated              │
-  │                                                   │
-  ├─ reader.read() loop ◄─── chunks ─────────────────┤
-  │   ├─ decode Uint8Array → TextDecoder              │
-  │   ├─ streamingContent += token                    │
-  │   └─ assistant bubble grows progressively         │
-  │                                                   │
-  │           stream ends ◄───────────────────────────┤
-  │                                                   ├─ TransformStream.flush()
-  │                                                   │   └─ saveAssistantResponse()
-  │                                                   │       └─ CREATE ConversationMessage
-  │                                                   │          (assistant)
-  ├─ await byId.invalidate()                          │
-  │   └─ refetch includes assistant msg               │
-  ├─ await list.invalidate()                          │
-  │   └─ sidebar refreshes                            │
-  │                                                   │
-  ├─ streamingContent = null                          │
-  ├─ optimisticMessages = []                          │
-  ├─ isSending = false                                │
-  │                                                   │
+  ├─ [streaming] sendMessageWithStreaming()
+  │   ├─ appendAssistantIndicator("")     (useOptimisticMessages)
+  │   │   └─ empty assistant bubble renders
+  │   │
+  │   ├─ fetchStreamingResponse() ─────────────────► route.ts
+  │   │   { projectId, conversationId?, content }     ├─ authorizeRequestOrThrow()
+  │   │                                               ├─ Zod v4 body validation
+  │   │                                               │
+  │   │                                               ├─ prepareAssistantRequest()
+  │   │                                               │   ├─ [new conv] CREATE Conversation
+  │   │                                               │   ├─ [existing] verify ownership
+  │   │                                               │   ├─ CREATE ConversationMessage (user)
+  │   │                                               │   └─ build ChatMessage[] history
+  │   │                                               │
+  │   │                                               ├─ streamAssistantResponse()
+  │   │                                               │   ├─ lookup LLM API key
+  │   │                                               │   └─ fetchLLMCompletion(streaming: true)
+  │   │                                               │       └─ auto-traced via traceSinkParams
+  │   │                                               │
+  │   │                                               ├─ pipe through TransformStream
+  │   │                                               │   (captures full text for DB save)
+  │   │                                               │
+  │   │  ◄──────── StreamingTextResponse ─────────────┤
+  │   │            headers: x-conversation-id          │
+  │   │                                                │
+  │   ├─ onToken callback ◄─── chunks ────────────────┤
+  │   │   └─ appendAssistantIndicator(accumulated)     │
+  │   │       └─ assistant bubble grows progressively   │
+  │   │                                                 │
+  │   │           stream ends ◄─────────────────────────┤
+  │   │                                                 ├─ TransformStream.flush()
+  │   │                                                 │   └─ saveAssistantResponse()
+  │   │                                                 │       └─ CREATE ConversationMessage
+  │   │                                                 │          (assistant)
+  │   ├─ [new conv] onConversationId callback           │
+  │   │   ├─ URL updates (?conversationId=...)          │
+  │   │   └─ list.invalidate() → sidebar shows conv     │
+  │   │                                                  │
+  │   ├─ await invalidateCache(conversationId)           │
+  │   │   └─ byId + list refetch                         │
+  │   └─ clearOptimisticMessages()                       │
+  │                                                      │
+  ├─ [non-streaming] sendMessage()                       │
+  │   ├─ appendAssistantIndicator("")                    │
+  │   ├─ tRPC sendMessageMutation.mutateAsync()          │
+  │   ├─ await invalidateCache(resolvedId)               │
+  │   ├─ clearOptimisticMessages()                       │
+  │   └─ onConversationId(resolvedId)                    │
+  │                                                      │
+  ├─ isSending = false                                   │
+  │                                                      │
   └─ UI fully driven by tRPC query data
 ```
 
@@ -194,10 +194,8 @@ web/src/features/assistant/
 │   │   ├── EmptyState.tsx         # Welcome screen with suggestions
 │   │   └── MessageInput.tsx       # Text input with send button
 │   └── hooks/
-│       ├── useAssistantChat.ts    # Chat hook (orchestrates conversations + messages)
-│       ├── useAssistantConversations.ts # Conversations data
-│       ├── useAssistantMessages.ts # Messages data (non-streaming, tRPC-based)
-│       └── useAssistantStreamMessages.ts # Messages data (streaming, fetch-based)
+│       ├── useAssistantChat.ts    # Single entry-point hook (conversations, streaming + non-streaming send)
+│       └── useOptimisticMessages.ts # Shared optimistic message state, deduplication, assistant indicator
 ├── server/
 │   ├── assistantRouter.ts         # tRPC router
 │   ├── llmClient.ts               # LLM client
@@ -218,21 +216,26 @@ Sidebar entry: Added to `web/src/components/layouts/routes.tsx` under "Prompt Ma
 
 ## Future Improvements
 
-- LLM model/provider selection dropdown
-- Message editing and regeneration
-- Export conversations
-- File/image upload support
+- **LLM model/provider selection dropdown** — Let users choose which model powers the assistant per conversation or as a user preference
+- **Message editing and regeneration** — Re-send from a given point in the conversation history
+- **Pagination** — Cursor-based pagination for the conversation list and message history to handle heavy usage
+- **Context window management** — Currently, every message in the conversation is sent to the LLM on each request (`buildChatMessages` in `service.ts` converts all DB messages into `ChatMessage[]`). This gives the model full context for better responses, but the token count grows linearly with conversation length and will eventually exceed the model's context limit or become expensive. A compaction strategy is needed — e.g., summarizing older messages into a condensed system prompt, sliding-window truncation, or a hybrid approach
+- **Streaming error recovery** — If `saveAssistantResponse` fails during `TransformStream.flush()`, the streamed response is lost. A retry queue or background reconciliation job would ensure persistence
+- **Rate limiting** — Per-user per-project limits on LLM calls to control API costs
+- **File/image upload support** — Multimodal input for models that support it
 
 ## Testing
 
 The assistant is tested at two levels, following the same patterns used across the Langfuse codebase:
 
 - **Backend (server tests)** — Jest with `@jest-environment node`, running against real PostgreSQL via Prisma. The LLM client is mocked so tests are fast and deterministic. File: `web/src/__tests__/async/assistant-api.servertest.ts`.
-- **Frontend (client tests)** — Jest with `jest-environment-jsdom`. Pure logic tests that don't require rendering React components or setting up tRPC providers. Files: `web/src/__tests__/assistant-*.clienttest.ts`.
+- **Frontend (client tests)** — Jest with `jest-environment-jsdom`. Component tests using React Testing Library that render real components with props and assert on what the user sees. Utility function tests for pure helpers. Files: `web/src/__tests__/assistant-ui.clienttest.tsx`, `web/src/__tests__/assistant-utils.clienttest.ts`.
 
-This split mirrors Langfuse's convention: `*.servertest.ts` for backend tests (run with `pnpm test`), `*.clienttest.ts` for frontend tests (run with `pnpm test-client`).
+This split mirrors Langfuse's convention: `*.servertest.ts` for backend tests (run with `pnpm test`), `*.clienttest.ts` / `*.clienttest.tsx` for frontend tests (run with `pnpm test-client`).
 
-- **E2E testing with Playwright** — The current test suite covers the backend (tRPC + DB) and frontend logic (message building, utils) in isolation. What's missing is full user-flow testing that exercises the entire stack end-to-end: rendering the page, typing a message, seeing tokens stream in, verifying the sidebar updates, switching conversations, and deleting them. Playwright (already used elsewhere in Langfuse for E2E tests) would cover the integration seams that unit tests can't — the wiring between hooks, components, the streaming API route, and the real DOM. Key scenarios: new conversation creation flow with streaming, conversation switching preserves messages, error states (no API key configured) show appropriate UI feedback, and sidebar reflects conversation list changes in real time.
+**Testing philosophy:** Simple component tests on the client (render with props, assert on DOM), comprehensive business logic tests on the server (real DB, mocked LLM). No tRPC mocking or hook harnesses on the frontend — that complexity belongs in E2E tests.
+
+- **E2E testing with Playwright** — The current test suite covers the backend (tRPC + DB) and frontend components in isolation. What's missing is full user-flow testing that exercises the entire stack end-to-end: rendering the page, typing a message, seeing tokens stream in, verifying the sidebar updates, switching conversations, and deleting them. Playwright (already used elsewhere in Langfuse for E2E tests) would cover the integration seams that unit tests can't — the wiring between hooks, components, the streaming API route, and the real DOM.
 
 ### Running tests
 
@@ -242,7 +245,7 @@ cd web
 # Backend tests (tRPC router + service layer, requires DB)
 pnpm test -- --testPathPatterns="assistant"
 
-# Frontend tests (utils + message-building logic, no DB needed)
+# Frontend tests (component + utility tests, no DB needed)
 pnpm test-client --testPathPatterns="assistant"
 ```
 
@@ -263,20 +266,16 @@ The LLM client (`fetchAssistantResponse`) is mocked via `jest.mock()` — tests 
 
 ### Frontend tests (14 tests)
 
-**`assistant-utils.clienttest.ts`** — Tests the `generateTitle` and `formatTimestamp` utility functions. Straightforward input/output validation.
+**`assistant-ui.clienttest.tsx`** (9 tests) — Component tests using React Testing Library. Each test renders a real component with props and asserts on what the user sees. No hooks, no tRPC mocks, no harnesses.
 
-**`assistant-stream-messages.clienttest.ts`** — Tests the message-building logic that lives inside `useAssistantStreamMessages`'s `useMemo`. This is the most complex piece of frontend logic: it merges fetched DB messages, optimistic user messages, and the streaming assistant message while handling deduplication.
-
-Rather than rendering the hook (which would require mocking tRPC providers, `fetch`, and `ReadableStream`), the pure logic is extracted into a `buildMessages()` function that replicates the memo's behavior. This tests:
-
-| Category | Tests | What they verify |
+| Component | Tests | What they verify |
 |---|---|---|
-| Optimistic state | no conversationId, streaming placeholder | Messages appear before any server response |
-| Deduplication | same content, different content, different sender | Optimistic messages are removed when DB data arrives (but only on exact match) |
-| Merge ordering | fetched + optimistic + streaming | Messages appear in the correct order at every stage |
-| Final state | no optimistic, no streaming | Clean state after stream completion |
+| ConversationMessage | user message, assistant message with copy button, loading placeholder | Correct sender labels, content rendering, copy affordance, loading state |
+| MessageInput | Enter/Shift+Enter behavior, disabled states | Submit fires on Enter but not Shift+Enter, button disabled when empty or explicitly disabled |
+| ConversationList | active highlight, select/create/delete actions, empty state | Active conversation highlighted, callbacks fire with correct IDs, delete confirmation dialog, empty message |
+| EmptyState | suggestions rendering and click | Suggestion buttons render and fire callback with suggestion text |
 
-This approach (testing extracted logic rather than the full hook) is intentional — the hook's React/tRPC wiring is standard boilerplate, while the message-merging logic is where bugs actually happen (as seen with the blink/duplication issues during development).
+**`assistant-utils.clienttest.ts`** (5 tests) — Tests the `generateTitle` and `formatTimestamp` utility functions. Straightforward input/output validation.
 
 ## Files Modified/Created
 
@@ -287,9 +286,7 @@ This approach (testing extracted logic rather than the full hook) is intentional
 - `web/src/features/assistant/page/components/ConversationList.tsx`
 - `web/src/features/assistant/page/components/EmptyState.tsx`
 - `web/src/features/assistant/page/hooks/useAssistantChat.ts`
-- `web/src/features/assistant/page/hooks/useAssistantMessages.ts`
-- `web/src/features/assistant/page/hooks/useAssistantStreamMessages.ts`
-- `web/src/features/assistant/page/hooks/useAssistantConversations.ts`
+- `web/src/features/assistant/page/hooks/useOptimisticMessages.ts`
 - `web/src/features/assistant/server/assistantRouter.ts`
 - `web/src/features/assistant/server/llmClient.ts`
 - `web/src/features/assistant/server/service.ts`
@@ -297,8 +294,8 @@ This approach (testing extracted logic rather than the full hook) is intentional
 - `web/src/app/api/assistant/chat/route.ts` — Streaming API endpoint
 - `web/src/pages/project/[projectId]/assistant.tsx`
 - `web/src/__tests__/async/assistant-api.servertest.ts` — Backend tRPC tests
+- `web/src/__tests__/assistant-ui.clienttest.tsx` — Component tests (React Testing Library)
 - `web/src/__tests__/assistant-utils.clienttest.ts` — Utility function tests
-- `web/src/__tests__/assistant-stream-messages.clienttest.ts` — Message-building logic tests
 - `ASSISTANT_README.md`
 - `packages/shared/prisma/migrations/[timestamp]_add_conversation_models/migration.sql`
 
