@@ -9,6 +9,7 @@ import { MessageInput } from "./components/MessageInput";
 import { ConversationList } from "./components/ConversationList";
 import { EmptyState } from "./components/EmptyState";
 import { NoDataOrLoading } from "@/src/components/NoDataOrLoading";
+import { Switch } from "@/src/components/ui/switch";
 
 export default function AssistantPage() {
   const projectId = useProjectIdFromURL() as string;
@@ -21,6 +22,8 @@ export default function AssistantPage() {
     setInput,
     isLoadingConversations,
     isSending,
+    streaming,
+    setStreaming,
     sendMessage,
     handleNewConversation,
     handleSelectConversation,
@@ -83,6 +86,21 @@ export default function AssistantPage() {
                 onSubmit={() => sendMessage()}
                 disabled={isSending}
               />
+              <div className="mx-auto mt-2 flex max-w-3xl items-center justify-end gap-2">
+                <label
+                  htmlFor="streaming-toggle"
+                  className="text-xs text-muted-foreground"
+                >
+                  Streaming
+                </label>
+                <Switch
+                  id="streaming-toggle"
+                  size="sm"
+                  checked={streaming}
+                  onCheckedChange={setStreaming}
+                  disabled={isSending}
+                />
+              </div>
             </div>
           </main>
         )}
@@ -118,7 +136,14 @@ function Conversation({
     >
       <div className="mx-auto max-w-3xl">
         {messages.map((message) => (
-          <ConversationMessage key={message.id} message={message} />
+          <ConversationMessage
+            key={message.id}
+            message={message}
+            isLoading={
+              message.id === "pending-assistant" ||
+              (message.id === "streaming-assistant" && !message.content)
+            }
+          />
         ))}
       </div>
     </div>

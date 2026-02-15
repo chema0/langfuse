@@ -443,10 +443,33 @@ export async function fetchLLMCompletion(
       return parsed.data;
     }
 
-    if (streaming)
-      return chatModel
-        .pipe(new BytesOutputParser())
+    if (streaming) {
+      // Use StringOutputParser so LangChain callbacks record text output
+      // (not raw byte arrays from BytesOutputParser which trace as
+      // {"0":byte,"1":byte,...}). We encode to bytes ourselves below.
+      const rawStream = await chatModel
+        .pipe(new StringOutputParser())
         .stream(finalMessages, runConfig);
+
+      // Wrap the stream to encode string chunks to bytes and to defer
+      // processTracedEvents until the stream is fully consumed.  The
+      // finally block below is skipped for streaming (see guard) because
+      // it would fire before LangChain callbacks have recorded
+      // output/usage data.
+      const encoder = new TextEncoder();
+      const transform = new TransformStream<string, Uint8Array>({
+        transform(chunk, controller) {
+          controller.enqueue(encoder.encode(chunk));
+        },
+        async flush() {
+          await processTracedEvents();
+        },
+      });
+
+      return rawStream.pipeThrough(
+        transform,
+      ) as unknown as IterableReadableStream<Uint8Array>;
+    }
 
     const completion = await chatModel
       .pipe(new StringOutputParser())
@@ -503,7 +526,12 @@ export async function fetchLLMCompletion(
       isRetryable,
     });
   } finally {
-    await processTracedEvents();
+    // For streaming, processTracedEvents is called when the stream is fully
+    // consumed (via the TransformStream flush above). Calling it here would
+    // fire before LangChain callbacks have recorded output/usage data.
+    if (!streaming) {
+      await processTracedEvents();
+    }
   }
 }
 

@@ -1,9 +1,11 @@
 import { useState, useCallback } from "react";
 import { useAssistantConversations } from "./useAssistantConversations";
 import { useAssistantStreamMessages } from "./useAssistantStreamMessages";
+import { useAssistantMessages } from "./useAssistantMessages";
 
 export function useAssistantChat({ projectId }: { projectId: string }) {
   const [input, setInput] = useState("");
+  const [streaming, setStreaming] = useState(true);
 
   const {
     conversations,
@@ -15,6 +17,18 @@ export function useAssistantChat({ projectId }: { projectId: string }) {
     handleDeleteConversation: onDeleteConversation,
   } = useAssistantConversations({ projectId });
 
+  const streamHook = useAssistantStreamMessages({
+    projectId,
+    conversationId: currentConversationId,
+  });
+
+  const nonStreamHook = useAssistantMessages({
+    projectId,
+    conversationId: currentConversationId,
+  });
+
+  const activeHook = streaming ? streamHook : nonStreamHook;
+
   const {
     messages,
     sendMessage: sendMessageToConversation,
@@ -22,10 +36,7 @@ export function useAssistantChat({ projectId }: { projectId: string }) {
     clearOptimisticMessages,
     isSending,
     isWaitingForResponse,
-  } = useAssistantStreamMessages({
-    projectId,
-    conversationId: currentConversationId,
-  });
+  } = activeHook;
 
   const handleNewConversation = useCallback(() => {
     onNewConversation();
@@ -35,19 +46,26 @@ export function useAssistantChat({ projectId }: { projectId: string }) {
   const handleSelectConversation = useCallback(
     (id: string) => {
       onSelectConversation(id);
+      streamHook.clearOptimisticMessages();
       clearOptimisticMessages();
     },
-    [onSelectConversation, clearOptimisticMessages],
+    [onSelectConversation, streamHook, clearOptimisticMessages],
   );
 
   const handleDeleteConversation = useCallback(
     async (id: string) => {
       await onDeleteConversation(id);
       if (currentConversationId === id) {
+        streamHook.clearOptimisticMessages();
         clearOptimisticMessages();
       }
     },
-    [onDeleteConversation, currentConversationId, clearOptimisticMessages],
+    [
+      onDeleteConversation,
+      currentConversationId,
+      streamHook,
+      clearOptimisticMessages,
+    ],
   );
 
   const sendMessage = useCallback(
@@ -63,8 +81,6 @@ export function useAssistantChat({ projectId }: { projectId: string }) {
         conversationId: currentConversationId,
         content: trimmedContent,
         onConversationId: (id) => {
-          // Update URL as soon as we know the conversation ID (from response headers),
-          // before the stream finishes, so the sidebar and URL stay in sync early
           if (!currentConversationId) {
             setCurrentConversationId(id);
           }
@@ -94,6 +110,8 @@ export function useAssistantChat({ projectId }: { projectId: string }) {
     isSending,
     isWaitingForResponse,
     isLoadingConversations,
+    streaming,
+    setStreaming,
     sendMessage,
     handleNewConversation,
     handleSelectConversation,

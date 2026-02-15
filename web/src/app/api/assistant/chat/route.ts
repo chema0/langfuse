@@ -49,7 +49,9 @@ export async function POST(req: NextRequest) {
       messages: prepared.chatMessages,
     });
 
-    // Wrap the stream to capture full content and save to DB after completion
+    // Wrap the stream to capture full content and save to DB after completion.
+    // Tracing is flushed automatically when the stream ends (handled inside
+    // fetchLLMCompletion's TransformStream).
     let fullContent = "";
     const decoder = new TextDecoder();
     const transformStream = new TransformStream<Uint8Array, Uint8Array>({

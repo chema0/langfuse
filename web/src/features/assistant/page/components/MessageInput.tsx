@@ -39,7 +39,6 @@ export function MessageInput({
               }
             }
           }}
-          disabled={disabled}
         />
         <InputGroupAddon align="block-end">
           <InputGroupButton
