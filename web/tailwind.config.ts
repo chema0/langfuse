@@ -255,5 +255,6 @@ module.exports = {
     require("@tailwindcss/forms"),
     require("tailwindcss-animate"),
     require("@tailwindcss/container-queries"),
+    require("@tailwindcss/typography"),
   ],
 };

@@ -402,6 +402,20 @@ export type CommentReaction = {
   emoji: string;
   created_at: Generated<Timestamp>;
 };
+export type Conversation = {
+  id: string;
+  project_id: string;
+  user_id: string;
+  started_at: Generated<Timestamp>;
+  title: string | null;
+};
+export type ConversationMessage = {
+  id: string;
+  conversation_id: string;
+  sender: string;
+  content: string;
+  created_at: Generated<Timestamp>;
+};
 export type CronJobs = {
   name: string;
   last_run: Timestamp | null;
@@ -964,6 +978,8 @@ export type DB = {
   cloud_spend_alerts: CloudSpendAlert;
   comment_reactions: CommentReaction;
   comments: Comment;
+  conversation_messages: ConversationMessage;
+  conversations: Conversation;
   cron_jobs: CronJobs;
   dashboard_widgets: DashboardWidget;
   dashboards: Dashboard;

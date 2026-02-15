@@ -9,6 +9,7 @@ import {
   Settings,
   UsersIcon,
   TerminalIcon,
+  MessageCircle,
   Lightbulb,
   Grid2X2,
   Sparkle,
@@ -41,6 +42,7 @@ export enum RouteGroup {
   Observability = "Observability",
   PromptManagement = "Prompt Management",
   Evaluation = "Evaluation",
+  Assistant = "Assistant",
 }
 
 export type Route = {
@@ -168,6 +170,13 @@ export const ROUTES: Route[] = [
     icon: Database,
     productModule: "datasets",
     group: RouteGroup.Evaluation,
+    section: RouteSection.Main,
+  },
+  {
+    title: "Assistant",
+    pathname: "/project/[projectId]/assistant",
+    icon: MessageCircle,
+    group: RouteGroup.Assistant,
     section: RouteSection.Main,
   },
   {

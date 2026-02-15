@@ -86,6 +86,7 @@ model User {
   commentReactions          CommentReaction[]
   notificationPreferences   NotificationPreference[]
   defaultViews              DefaultView[]               @relation("DefaultViewUser")
+  conversations             Conversation[]
 
   @@map("users")
 }
@@ -177,6 +178,7 @@ model Project {
   AnnotationQueueAssignment AnnotationQueueAssignment[]
   NotificationPreference    NotificationPreference[]
   DefaultView               DefaultView[]
+  Conversation              Conversation[]
 
   @@index([orgId])
   @@map("projects")
@@ -1616,4 +1618,32 @@ model CloudSpendAlert {
 
   @@index([orgId])
   @@map("cloud_spend_alerts")
+}
+
+model Conversation {
+  id        String    @id @default(cuid())
+  projectId String    @map("project_id")
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String    @map("user_id")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startedAt DateTime  @default(now()) @map("started_at")
+  title     String?
+
+  messages  ConversationMessage[]
+
+  @@index([projectId])
+  @@index([userId])
+  @@map("conversations")
+}
+
+model ConversationMessage {
+  id             String       @id @default(cuid())
+  conversationId String       @map("conversation_id")
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         String       // "user" | "assistant"
+  content        String
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  @@index([conversationId])
+  @@map("conversation_messages")
 }
