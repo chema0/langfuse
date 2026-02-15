@@ -37,7 +37,7 @@ export function ConversationList({
           isCollapsed ? "md:w-[60px]" : "md:w-[280px]",
           // Mobile: overlay sidebar when open
           !isCollapsed &&
-          "fixed inset-y-0 left-0 z-30 !flex w-[280px] shadow-xl md:relative md:shadow-none",
+            "fixed inset-y-0 left-0 z-30 !flex w-[280px] shadow-xl md:relative md:shadow-none",
         )}
       >
         <div className="flex h-14 shrink-0 items-center justify-between border-b p-4">
@@ -136,7 +136,7 @@ function ConversationItem({
         variant="ghost"
         className={cn(
           "h-auto w-full justify-start px-3 py-2.5 font-normal group-hover:pr-6",
-          selected && "bg-muted"
+          selected && "bg-muted",
         )}
         aria-current={`${selected}`}
       >

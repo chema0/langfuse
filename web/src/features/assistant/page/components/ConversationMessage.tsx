@@ -61,7 +61,7 @@ export function ConversationMessage({
         </div>
         <div
           className={cn(
-            "prose prose-sm dark:prose-invert max-w-none break-words leading-normal",
+            "prose prose-sm max-w-none break-words leading-normal dark:prose-invert",
             isLoading && "animate-pulse",
           )}
         >

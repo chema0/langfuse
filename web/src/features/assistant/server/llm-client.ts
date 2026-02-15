@@ -10,7 +10,11 @@ import {
 
 export type AssistantResponse =
   | { success: true; content: string }
-  | { success: false; error: "NOT_FOUND" | "NO_API_KEY" | "INVALID_API_KEY" | "LLM_CALL_FAILED"; message?: string };
+  | {
+      success: false;
+      error: "NOT_FOUND" | "NO_API_KEY" | "INVALID_API_KEY" | "LLM_CALL_FAILED";
+      message?: string;
+    };
 
 export async function fetchAssistantResponse({
   projectId,
@@ -75,7 +79,8 @@ export async function fetchAssistantResponse({
     return {
       success: false,
       error: "LLM_CALL_FAILED",
-      message: error instanceof Error ? error.message : "Failed to get LLM response",
+      message:
+        error instanceof Error ? error.message : "Failed to get LLM response",
     };
   }
 }

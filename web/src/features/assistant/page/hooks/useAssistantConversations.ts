@@ -2,7 +2,11 @@ import { useCallback } from "react";
 import { useQueryParam, StringParam } from "use-query-params";
 import { api } from "@/src/utils/api";
 
-export function useAssistantConversations({ projectId }: { projectId: string }) {
+export function useAssistantConversations({
+  projectId,
+}: {
+  projectId: string;
+}) {
   const [currentConversationId, setCurrentConversationId] = useQueryParam(
     "conversationId",
     StringParam,
@@ -34,7 +38,13 @@ export function useAssistantConversations({ projectId }: { projectId: string }) 
       }
       await utils.assistant.list.invalidate({ projectId });
     },
-    [projectId, currentConversationId, deleteMutation, utils, setCurrentConversationId],
+    [
+      projectId,
+      currentConversationId,
+      deleteMutation,
+      utils,
+      setCurrentConversationId,
+    ],
   );
 
   return {

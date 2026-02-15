@@ -3,7 +3,10 @@ import { api } from "@/src/utils/api";
 import { showErrorToast } from "@/src/features/notifications/showErrorToast";
 import type { ConversationMessage } from "@prisma/client";
 
-type OptimisticMessage = Pick<ConversationMessage, "id" | "sender" | "content" | "createdAt">;
+type OptimisticMessage = Pick<
+  ConversationMessage,
+  "id" | "sender" | "content" | "createdAt"
+>;
 
 export function useAssistantMessages({
   projectId,
@@ -12,7 +15,9 @@ export function useAssistantMessages({
   projectId: string;
   conversationId: string | null;
 }) {
-  const [optimisticMessages, setOptimisticMessages] = useState<OptimisticMessage[]>([]);
+  const [optimisticMessages, setOptimisticMessages] = useState<
+    OptimisticMessage[]
+  >([]);
 
   const utils = api.useUtils();
 
@@ -23,10 +28,7 @@ export function useAssistantMessages({
 
   const sendMessageMutation = api.assistant.sendMessage.useMutation({
     onError: (err) => {
-      showErrorToast(
-        "Failed to send message",
-        err.message,
-      );
+      showErrorToast("Failed to send message", err.message);
       setOptimisticMessages([]);
     },
     onSettled: async (data, _error, variables) => {
@@ -71,7 +73,13 @@ export function useAssistantMessages({
   }, []);
 
   const sendMessage = useCallback(
-    async ({ conversationId: convId, content }: { conversationId?: string; content: string }) => {
+    async ({
+      conversationId: convId,
+      content,
+    }: {
+      conversationId?: string;
+      content: string;
+    }) => {
       return sendMessageMutation.mutateAsync({
         projectId,
         conversationId: convId,

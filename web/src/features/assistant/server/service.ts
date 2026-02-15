@@ -99,7 +99,7 @@ export async function ask({
     projectId,
     userId,
     generateTitle(content),
-    conversationId
+    conversationId,
   );
 
   if (!conversation) {
@@ -171,21 +171,19 @@ async function getOrCreteConversation(
   });
 }
 
-function buildChatMessages(
-  messages: ConversationMessage[],
-): ChatMessage[] {
+function buildChatMessages(messages: ConversationMessage[]): ChatMessage[] {
   return messages.map(
     (m): ChatMessage =>
       m.sender === ChatMessageRole.User
         ? {
-          role: ChatMessageRole.User,
-          content: m.content,
-          type: ChatMessageType.User,
-        }
+            role: ChatMessageRole.User,
+            content: m.content,
+            type: ChatMessageType.User,
+          }
         : {
-          role: ChatMessageRole.Assistant,
-          content: m.content,
-          type: ChatMessageType.AssistantText,
-        },
+            role: ChatMessageRole.Assistant,
+            content: m.content,
+            type: ChatMessageType.AssistantText,
+          },
   );
 }

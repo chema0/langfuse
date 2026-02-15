@@ -112,7 +112,10 @@ function Conversation({
   isSending,
   handleSuggestionClick,
 }: {
-  messages: Pick<ConversationMessage, "id" | "sender" | "content" | "createdAt">[];
+  messages: Pick<
+    ConversationMessage,
+    "id" | "sender" | "content" | "createdAt"
+  >[];
   isConversationsLoading: boolean;
   isSending: boolean;
   handleSuggestionClick: (suggestion: string) => void;
@@ -127,7 +130,7 @@ function Conversation({
   }, [messages]);
 
   if (isConversationsLoading) {
-    return <NoDataOrLoading isLoading={true} />
+    return <NoDataOrLoading isLoading={true} />;
   }
 
   if (messages.length === 0) {
@@ -135,7 +138,7 @@ function Conversation({
       <div className="flex h-full flex-col justify-center">
         <EmptyState onSuggestionClick={handleSuggestionClick} />
       </div>
-    )
+    );
   }
 
   return (
@@ -150,13 +153,11 @@ function Conversation({
         {isSending && (
           <div className="mb-4 flex items-start gap-4 rounded-lg border bg-background p-4">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">
-              Thinking...
-            </span>
+            <span className="text-sm text-muted-foreground">Thinking...</span>
           </div>
         )}
         <div className="h-4" />
       </div>
     </div>
-  )
+  );
 }

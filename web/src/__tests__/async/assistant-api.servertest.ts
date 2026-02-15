@@ -16,7 +16,7 @@ jest.mock("../../features/assistant/server/llm-client", () => ({
 async function prepare() {
   const { project, org } = await createOrgProjectAndApiKey();
 
-  const user = await createTestUser()
+  const user = await createTestUser();
 
   const session = createSession(user, org, project);
 
@@ -74,13 +74,13 @@ function createSession(
         excludeClickhouseRead: false,
         templateFlag: true,
         v4BetaToggleVisible: false,
-        observationEvals: false
+        observationEvals: false,
       },
       admin: false, // Not admin to test actual limits
     },
     environment: {
       enableExperimentalFeatures: false,
-      selfHostedInstancePlan: "cloud:hobby"
+      selfHostedInstancePlan: "cloud:hobby",
     },
   };
 }
@@ -224,7 +224,9 @@ describe("Assistant tRPC router", () => {
 
     expect(updatedConversation.messages.length).toBe(2);
     expect(updatedConversation.messages[0].content).toBe("Hello assistant");
-    expect(updatedConversation.messages[1].content).toBe("Hello from assistant");
+    expect(updatedConversation.messages[1].content).toBe(
+      "Hello from assistant",
+    );
   });
 
   it("should create a conversation when sendMessage is called without conversationId", async () => {
@@ -258,7 +260,8 @@ describe("Assistant tRPC router", () => {
   it("should auto-title from a long first message by truncating to 50 chars", async () => {
     const { project, caller } = await prepare();
 
-    const longMessage = "This is a very long message that exceeds fifty characters and should be truncated";
+    const longMessage =
+      "This is a very long message that exceeds fifty characters and should be truncated";
 
     (fetchAssistantResponse as jest.Mock).mockResolvedValue({
       success: true,

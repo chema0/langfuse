@@ -21,7 +21,10 @@ export function useAssistantChat({ projectId }: { projectId: string }) {
     addOptimisticMessage,
     clearOptimisticMessages,
     isSending,
-  } = useAssistantMessages({ projectId, conversationId: currentConversationId });
+  } = useAssistantMessages({
+    projectId,
+    conversationId: currentConversationId,
+  });
 
   const handleNewConversation = useCallback(() => {
     onNewConversation();
