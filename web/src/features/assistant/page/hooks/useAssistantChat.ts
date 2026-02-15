@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { useAssistantConversations } from "./useAssistantConversations";
-import { useAssistantMessages } from "./useAssistantMessages";
+import { useAssistantStreamMessages } from "./useAssistantStreamMessages";
 
 export function useAssistantChat({ projectId }: { projectId: string }) {
   const [input, setInput] = useState("");
@@ -21,7 +21,8 @@ export function useAssistantChat({ projectId }: { projectId: string }) {
     addOptimisticMessage,
     clearOptimisticMessages,
     isSending,
-  } = useAssistantMessages({
+    isWaitingForResponse,
+  } = useAssistantStreamMessages({
     projectId,
     conversationId: currentConversationId,
   });
@@ -58,15 +59,17 @@ export function useAssistantChat({ projectId }: { projectId: string }) {
       const trimmedContent = contentToSend.trim();
       addOptimisticMessage(trimmedContent);
 
-      const result = await sendMessageToConversation({
+      await sendMessageToConversation({
         conversationId: currentConversationId ?? undefined,
         content: trimmedContent,
+        onConversationId: (id) => {
+          // Update URL as soon as we know the conversation ID (from response headers),
+          // before the stream finishes, so the sidebar and URL stay in sync early
+          if (!currentConversationId) {
+            setCurrentConversationId(id);
+          }
+        },
       });
-
-      // If a new conversation was created, update the URL
-      if (result && "conversationId" in result && !currentConversationId) {
-        setCurrentConversationId(result.conversationId);
-      }
     },
     [
       input,
@@ -89,6 +92,7 @@ export function useAssistantChat({ projectId }: { projectId: string }) {
     input,
     setInput,
     isSending,
+    isWaitingForResponse,
     isConversationsLoading,
     sendMessage,
     handleNewConversation,

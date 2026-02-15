@@ -1,6 +1,17 @@
 import { Plus, PanelLeftClose, PanelLeft, Trash2 } from "lucide-react";
 import { cn } from "@/src/utils/tailwind";
 import { Button } from "@/src/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/src/components/ui/alert-dialog";
+import { useState } from "react";
 interface ConversationListProps {
   conversations: { id: string; title: string | null; startedAt: Date }[];
   currentConversationId: string | null;
@@ -20,6 +31,13 @@ export function ConversationList({
   isCollapsed,
   onToggleCollapse,
 }: ConversationListProps) {
+  const [conversationId, setConversationId] = useState<string | null>(null);
+
+  const handleDeleteConversation = () => {
+    onDeleteConversation(conversationId as string);
+    setConversationId(null);
+  };
+
   return (
     <>
       {!isCollapsed && (
@@ -88,7 +106,7 @@ export function ConversationList({
                         title={conversation.title || "New conversation"}
                         selected={currentConversationId === conversation.id}
                         onSelect={() => onSelectConversation(conversation.id)}
-                        onDelete={() => onDeleteConversation(conversation.id)}
+                        onDelete={() => setConversationId(conversation.id)}
                       />
                     ))}
                   </ul>
@@ -112,6 +130,30 @@ export function ConversationList({
           </div>
         )}
       </aside>
+
+      <AlertDialog
+        open={!!conversationId}
+        onOpenChange={() => setConversationId(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete this
+              conversation.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={handleDeleteConversation}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

@@ -6,10 +6,10 @@ import { prisma } from "@langfuse/shared/src/db";
 import { createOrgProjectAndApiKey } from "@langfuse/shared/src/server";
 import type { Session } from "next-auth";
 import { v4 as uuidv4 } from "uuid";
-import { fetchAssistantResponse } from "../../features/assistant/server/llm-client";
+import { fetchAssistantResponse } from "../../features/assistant/server/llmClient";
 
 // Mock the LLM client
-jest.mock("../../features/assistant/server/llm-client", () => ({
+jest.mock("../../features/assistant/server/llmClient", () => ({
   fetchAssistantResponse: jest.fn(),
 }));
 
@@ -279,5 +279,152 @@ describe("Assistant tRPC router", () => {
     });
 
     expect(conversation.title).toBe(longMessage.substring(0, 50) + "...");
+  });
+
+  it("should throw when LLM call fails", async () => {
+    const { project, caller } = await prepare();
+
+    (fetchAssistantResponse as jest.Mock).mockResolvedValue({
+      success: false,
+      error: "LLM_CALL_FAILED",
+      message: "Rate limit exceeded",
+    });
+
+    await expect(
+      caller.assistant.sendMessage({
+        projectId: project.id,
+        content: "Hello assistant",
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("should throw BAD_REQUEST when no API key is configured", async () => {
+    const { project, caller } = await prepare();
+
+    (fetchAssistantResponse as jest.Mock).mockResolvedValue({
+      success: false,
+      error: "NO_API_KEY",
+    });
+
+    await expect(
+      caller.assistant.sendMessage({
+        projectId: project.id,
+        content: "Hello assistant",
+      }),
+    ).rejects.toThrow("No LLM API key configured");
+  });
+
+  it("should accumulate messages across multiple turns", async () => {
+    const { project, caller } = await prepare();
+
+    (fetchAssistantResponse as jest.Mock).mockResolvedValue({
+      success: true,
+      content: "Reply 1",
+    });
+
+    const turn1 = await caller.assistant.sendMessage({
+      projectId: project.id,
+      content: "Message 1",
+    });
+
+    (fetchAssistantResponse as jest.Mock).mockResolvedValue({
+      success: true,
+      content: "Reply 2",
+    });
+
+    await caller.assistant.sendMessage({
+      projectId: project.id,
+      conversationId: turn1.conversationId,
+      content: "Message 2",
+    });
+
+    (fetchAssistantResponse as jest.Mock).mockResolvedValue({
+      success: true,
+      content: "Reply 3",
+    });
+
+    await caller.assistant.sendMessage({
+      projectId: project.id,
+      conversationId: turn1.conversationId,
+      content: "Message 3",
+    });
+
+    const conversation = await caller.assistant.byId({
+      projectId: project.id,
+      conversationId: turn1.conversationId,
+    });
+
+    expect(conversation.messages).toHaveLength(6);
+    expect(conversation.messages.map((m) => m.content)).toEqual([
+      "Message 1",
+      "Reply 1",
+      "Message 2",
+      "Reply 2",
+      "Message 3",
+      "Reply 3",
+    ]);
+    expect(conversation.messages.map((m) => m.sender)).toEqual([
+      "user",
+      "assistant",
+      "user",
+      "assistant",
+      "user",
+      "assistant",
+    ]);
+  });
+
+  it("should still persist user message when LLM call fails", async () => {
+    const { project, caller } = await prepare();
+
+    const conversation = await caller.assistant.create({
+      projectId: project.id,
+    });
+
+    (fetchAssistantResponse as jest.Mock).mockResolvedValue({
+      success: false,
+      error: "LLM_CALL_FAILED",
+      message: "Service unavailable",
+    });
+
+    await expect(
+      caller.assistant.sendMessage({
+        projectId: project.id,
+        conversationId: conversation.id,
+        content: "This should be saved",
+      }),
+    ).rejects.toThrow();
+
+    // The user message should still be persisted even though the LLM failed
+    const updated = await caller.assistant.byId({
+      projectId: project.id,
+      conversationId: conversation.id,
+    });
+
+    expect(updated.messages).toHaveLength(1);
+    expect(updated.messages[0].content).toBe("This should be saved");
+    expect(updated.messages[0].sender).toBe("user");
+  });
+
+  it("should not delete a conversation belonging to another user", async () => {
+    const { project: project1, caller: caller1 } = await prepare();
+    const { caller: caller2 } = await prepare();
+
+    const conversation = await caller1.assistant.create({
+      projectId: project1.id,
+    });
+
+    await expect(
+      caller2.assistant.delete({
+        projectId: project1.id,
+        conversationId: conversation.id,
+      }),
+    ).rejects.toThrow();
+
+    // Verify conversation still exists
+    const result = await caller1.assistant.byId({
+      projectId: project1.id,
+      conversationId: conversation.id,
+    });
+    expect(result.id).toBe(conversation.id);
   });
 });

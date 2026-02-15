@@ -16,6 +16,57 @@ export type AssistantResponse =
       message?: string;
     };
 
+export async function streamAssistantResponse({
+  projectId,
+  userId,
+  conversationId,
+  messages,
+}: {
+  projectId: string;
+  userId: string;
+  conversationId: string;
+  messages: ChatMessage[];
+}) {
+  const llmApiKey = await prisma.llmApiKeys.findFirst({
+    where: { projectId },
+  });
+
+  if (!llmApiKey) {
+    throw new Error("No LLM API key configured for this project");
+  }
+
+  const parsedKey = LLMApiKeySchema.safeParse(llmApiKey);
+  if (!parsedKey.success) {
+    throw new Error(
+      `Could not parse LLM API key for provider ${llmApiKey.provider}`,
+    );
+  }
+
+  const model =
+    parsedKey.data.customModels.length > 0
+      ? parsedKey.data.customModels[0]
+      : "gpt-4o-mini";
+
+  return fetchLLMCompletion({
+    llmConnection: parsedKey.data,
+    messages,
+    modelParams: {
+      provider: llmApiKey.provider,
+      model,
+      adapter: parsedKey.data.adapter,
+    },
+    streaming: true,
+    traceSinkParams: {
+      targetProjectId: projectId,
+      traceId: randomUUID(),
+      traceName: "assistant-chat",
+      environment: "langfuse-assistant",
+      userId,
+      sessionId: conversationId,
+    },
+  });
+}
+
 export async function fetchAssistantResponse({
   projectId,
   userId,

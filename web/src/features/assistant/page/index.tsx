@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import type { ConversationMessage } from "@prisma/client";
+import type { ConversationMessage as Message } from "@prisma/client";
 import { Loader2, PanelLeft } from "lucide-react";
 import Page from "@/src/components/layouts/page";
 import { Button } from "@/src/components/ui/button";
@@ -86,7 +86,6 @@ export default function AssistantPage() {
           <Conversation
             messages={messages}
             isConversationsLoading={isConversationsLoading}
-            isSending={isSending}
             handleSuggestionClick={handleSuggestionClick}
           />
 
@@ -109,15 +108,10 @@ export default function AssistantPage() {
 function Conversation({
   messages,
   isConversationsLoading,
-  isSending,
   handleSuggestionClick,
 }: {
-  messages: Pick<
-    ConversationMessage,
-    "id" | "sender" | "content" | "createdAt"
-  >[];
+  messages: Pick<Message, "id" | "sender" | "content" | "createdAt">[];
   isConversationsLoading: boolean;
-  isSending: boolean;
   handleSuggestionClick: (suggestion: string) => void;
 }) {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -150,12 +144,7 @@ function Conversation({
         {messages.map((message) => (
           <ConversationMessage key={message.id} message={message} />
         ))}
-        {isSending && (
-          <div className="mb-4 flex items-start gap-4 rounded-lg border bg-background p-4">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">Thinking...</span>
-          </div>
-        )}
+
         <div className="h-4" />
       </div>
     </div>

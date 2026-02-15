@@ -1,6 +1,6 @@
 CREATE TABLE "conversations" (
     "id" TEXT NOT NULL,
-    "title" TEXT NOT NULL,
+    "title" TEXT,
     "project_id" TEXT NOT NULL,
     "user_id" TEXT NOT NULL,
     "started_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,

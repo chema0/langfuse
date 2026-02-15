@@ -81,10 +81,10 @@ export async function deleteConversation({
   return { success: true };
 }
 
-import { fetchAssistantResponse } from "./llm-client";
+import { fetchAssistantResponse } from "./llmClient";
 import { generateTitle } from "@/src/features/assistant/utils";
 
-export async function ask({
+export async function prepareAssistantRequest({
   conversationId,
   projectId,
   userId,
@@ -116,11 +116,52 @@ export async function ask({
     type: ChatMessageType.User,
   });
 
+  return { conversation, userMessage, chatMessages };
+}
+
+export async function saveAssistantResponse({
+  conversationId,
+  content,
+}: {
+  conversationId: string;
+  content: string;
+}) {
+  return prisma.conversationMessage.create({
+    data: {
+      conversationId,
+      sender: ChatMessageRole.Assistant,
+      content,
+    },
+  });
+}
+
+export async function ask({
+  conversationId,
+  projectId,
+  userId,
+  content,
+}: {
+  conversationId?: string;
+  projectId: string;
+  userId: string;
+  content: string;
+}) {
+  const prepared = await prepareAssistantRequest({
+    conversationId,
+    projectId,
+    userId,
+    content,
+  });
+
+  if (!prepared) {
+    return null;
+  }
+
   const llmResult = await fetchAssistantResponse({
     projectId,
     userId,
-    conversationId: conversation.id,
-    messages: chatMessages,
+    conversationId: prepared.conversation.id,
+    messages: prepared.chatMessages,
   });
 
   if (!llmResult.success) {
@@ -130,17 +171,14 @@ export async function ask({
     };
   }
 
-  const assistantMessage = await prisma.conversationMessage.create({
-    data: {
-      conversationId: conversation.id,
-      sender: ChatMessageRole.Assistant,
-      content: llmResult.content,
-    },
+  const assistantMessage = await saveAssistantResponse({
+    conversationId: prepared.conversation.id,
+    content: llmResult.content,
   });
 
   return {
-    conversationId: conversation.id,
-    userMessage,
+    conversationId: prepared.conversation.id,
+    userMessage: prepared.userMessage,
     assistantMessage,
   };
 }
