@@ -14,7 +14,7 @@ export function useAssistantStreamMessages({
   conversationId,
 }: {
   projectId: string;
-  conversationId: string | null;
+  conversationId?: string;
 }) {
   const [optimisticMessages, setOptimisticMessages] = useState<
     OptimisticMessage[]
@@ -35,7 +35,6 @@ export function useAssistantStreamMessages({
 
     // When the byId query has fetched data, skip optimistic messages whose
     // content already appears in the fetched list to avoid duplicates
-    // (e.g. after a new conversation ID is set mid-stream).
     const dedupedOptimistic =
       fetchedMessages.length > 0
         ? optimisticMessages.filter(

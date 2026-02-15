@@ -49,8 +49,8 @@ export function useAssistantConversations({
 
   return {
     conversations: conversationsQuery.data ?? [],
-    currentConversationId: currentConversationId ?? null,
-    isConversationsLoading: conversationsQuery.isLoading,
+    currentConversationId: currentConversationId ?? undefined,
+    isLoadingConversations: conversationsQuery.isLoading,
     setCurrentConversationId,
     handleNewConversation,
     handleSelectConversation,

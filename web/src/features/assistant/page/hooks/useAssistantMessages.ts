@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { api } from "@/src/utils/api";
 import { showErrorToast } from "@/src/features/notifications/showErrorToast";
-import type { ConversationMessage } from "@prisma/client";
+import { ConversationMessage } from "@prisma/client";
 
 type OptimisticMessage = Pick<
   ConversationMessage,
@@ -32,14 +32,12 @@ export function useAssistantMessages({
       setOptimisticMessages([]);
     },
     onSettled: async (data, _error, variables) => {
-      const convId =
-        variables.conversationId ??
-        (data && "conversationId" in data ? data.conversationId : undefined);
+      const id = variables.conversationId ?? data?.conversationId;
       await Promise.all([
-        convId
+        id
           ? utils.assistant.byId.invalidate({
               projectId,
-              conversationId: convId,
+              conversationId: id,
             })
           : Promise.resolve(),
         utils.assistant.list.invalidate({ projectId }),
@@ -95,5 +93,6 @@ export function useAssistantMessages({
     addOptimisticMessage,
     clearOptimisticMessages,
     isSending: sendMessageMutation.isPending,
+    isLoadingConversation: conversationQuery.isLoading,
   };
 }

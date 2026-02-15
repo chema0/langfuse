@@ -8,7 +8,7 @@ export function useAssistantChat({ projectId }: { projectId: string }) {
   const {
     conversations,
     currentConversationId,
-    isConversationsLoading,
+    isLoadingConversations,
     setCurrentConversationId,
     handleNewConversation: onNewConversation,
     handleSelectConversation: onSelectConversation,
@@ -60,7 +60,7 @@ export function useAssistantChat({ projectId }: { projectId: string }) {
       addOptimisticMessage(trimmedContent);
 
       await sendMessageToConversation({
-        conversationId: currentConversationId ?? undefined,
+        conversationId: currentConversationId,
         content: trimmedContent,
         onConversationId: (id) => {
           // Update URL as soon as we know the conversation ID (from response headers),
@@ -93,7 +93,7 @@ export function useAssistantChat({ projectId }: { projectId: string }) {
     setInput,
     isSending,
     isWaitingForResponse,
-    isConversationsLoading,
+    isLoadingConversations,
     sendMessage,
     handleNewConversation,
     handleSelectConversation,

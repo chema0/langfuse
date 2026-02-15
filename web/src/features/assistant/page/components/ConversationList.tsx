@@ -14,12 +14,10 @@ import {
 import { useState } from "react";
 interface ConversationListProps {
   conversations: { id: string; title: string | null; startedAt: Date }[];
-  currentConversationId: string | null;
+  currentConversationId?: string;
   onSelectConversation: (id: string) => void;
   onNewConversation: () => void;
   onDeleteConversation: (id: string) => void;
-  isCollapsed: boolean;
-  onToggleCollapse: () => void;
 }
 
 export function ConversationList({
@@ -28,10 +26,9 @@ export function ConversationList({
   onSelectConversation,
   onNewConversation,
   onDeleteConversation,
-  isCollapsed,
-  onToggleCollapse,
 }: ConversationListProps) {
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   const handleDeleteConversation = () => {
     onDeleteConversation(conversationId as string);
@@ -43,7 +40,7 @@ export function ConversationList({
       {!isCollapsed && (
         <div
           className="fixed inset-0 z-20 bg-black/50 md:hidden"
-          onClick={onToggleCollapse}
+          onClick={() => setIsCollapsed(false)}
           aria-hidden="true"
         />
       )}
@@ -60,7 +57,7 @@ export function ConversationList({
       >
         <div className="flex h-14 shrink-0 items-center justify-between border-b p-4">
           <Button
-            onClick={onToggleCollapse}
+            onClick={() => setIsCollapsed(!isCollapsed)}
             variant="ghost"
             size="icon"
             className={cn("h-8 w-8", isCollapsed ? "mx-auto" : "")}

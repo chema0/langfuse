@@ -1,8 +1,7 @@
-import { useState, useRef, useEffect } from "react";
+import { useRef, useEffect } from "react";
 import type { ConversationMessage as Message } from "@prisma/client";
-import { Loader2, PanelLeft } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import Page from "@/src/components/layouts/page";
-import { Button } from "@/src/components/ui/button";
 import useProjectIdFromURL from "@/src/hooks/useProjectIdFromURL";
 import { useAssistantChat } from "./hooks/useAssistantChat";
 import { ConversationMessage } from "./components/ConversationMessage";
@@ -10,9 +9,9 @@ import { MessageInput } from "./components/MessageInput";
 import { ConversationList } from "./components/ConversationList";
 import { EmptyState } from "./components/EmptyState";
 import { NoDataOrLoading } from "@/src/components/NoDataOrLoading";
+
 export default function AssistantPage() {
   const projectId = useProjectIdFromURL() as string;
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const {
     conversations,
@@ -20,7 +19,7 @@ export default function AssistantPage() {
     messages,
     input,
     setInput,
-    isConversationsLoading,
+    isLoadingConversations,
     isSending,
     sendMessage,
     handleNewConversation,
@@ -66,31 +65,18 @@ export default function AssistantPage() {
           onSelectConversation={handleSelectConversation}
           onNewConversation={handleNewConversation}
           onDeleteConversation={handleDeleteConversation}
-          isCollapsed={sidebarCollapsed}
-          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
 
-        <main className="flex h-full min-w-0 flex-1 flex-col bg-background">
-          <div className="flex h-10 shrink-0 items-center border-b px-4 md:hidden">
-            <Button
-              onClick={() => setSidebarCollapsed(false)}
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              aria-label="Open conversation list"
-            >
-              <PanelLeft size={20} />
-            </Button>
-          </div>
+        {isLoadingConversations ? (
+          <NoDataOrLoading isLoading={true} className="h-full" />
+        ) : (
+          <main className="flex h-full min-w-0 flex-1 flex-col bg-background">
+            <Conversation
+              messages={messages}
+              handleSuggestionClick={handleSuggestionClick}
+            />
 
-          <Conversation
-            messages={messages}
-            isConversationsLoading={isConversationsLoading}
-            handleSuggestionClick={handleSuggestionClick}
-          />
-
-          <div className="shrink-0 bg-background p-4">
-            <div className="mx-auto">
+            <div className="shrink-0 p-4">
               <MessageInput
                 value={input}
                 onChange={setInput}
@@ -98,8 +84,8 @@ export default function AssistantPage() {
                 disabled={isSending}
               />
             </div>
-          </div>
-        </main>
+          </main>
+        )}
       </div>
     </Page>
   );
@@ -107,11 +93,9 @@ export default function AssistantPage() {
 
 function Conversation({
   messages,
-  isConversationsLoading,
   handleSuggestionClick,
 }: {
   messages: Pick<Message, "id" | "sender" | "content" | "createdAt">[];
-  isConversationsLoading: boolean;
   handleSuggestionClick: (suggestion: string) => void;
 }) {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -123,29 +107,19 @@ function Conversation({
     }
   }, [messages]);
 
-  if (isConversationsLoading) {
-    return <NoDataOrLoading isLoading={true} />;
-  }
-
   if (messages.length === 0) {
-    return (
-      <div className="flex h-full flex-col justify-center">
-        <EmptyState onSuggestionClick={handleSuggestionClick} />
-      </div>
-    );
+    return <EmptyState onSuggestionClick={handleSuggestionClick} />;
   }
 
   return (
     <div
       ref={scrollAreaRef}
-      className="flex-1 overflow-y-auto scroll-smooth p-6"
+      className="flex-1 overflow-y-auto scroll-smooth p-6 pb-8"
     >
       <div className="mx-auto max-w-3xl">
         {messages.map((message) => (
           <ConversationMessage key={message.id} message={message} />
         ))}
-
-        <div className="h-4" />
       </div>
     </div>
   );
