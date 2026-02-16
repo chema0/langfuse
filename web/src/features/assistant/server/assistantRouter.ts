@@ -13,7 +13,7 @@ import {
 } from "./service";
 
 export const assistantRouter = createTRPCRouter({
-  list: protectedProjectProcedure
+  listConversations: protectedProjectProcedure
     .input(z.object({ projectId: z.string() }))
     .query(async ({ ctx, input }) => {
       return listConversations({
@@ -22,7 +22,7 @@ export const assistantRouter = createTRPCRouter({
       });
     }),
 
-  byId: protectedProjectProcedure
+  getConversationById: protectedProjectProcedure
     .input(
       z.object({
         projectId: z.string(),
@@ -46,7 +46,8 @@ export const assistantRouter = createTRPCRouter({
       return conversation;
     }),
 
-  create: protectedProjectProcedure
+  // Not used, because the `sendMessage` mutation creates the conversation if it doesn't exist
+  createConversation: protectedProjectProcedure
     .input(
       z.object({
         projectId: z.string(),
@@ -106,7 +107,7 @@ export const assistantRouter = createTRPCRouter({
       return result;
     }),
 
-  delete: protectedProjectProcedure
+  deleteConversation: protectedProjectProcedure
     .input(
       z.object({
         projectId: z.string(),

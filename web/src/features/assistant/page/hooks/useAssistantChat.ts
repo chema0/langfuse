@@ -5,6 +5,8 @@ import { env } from "@/src/env.mjs";
 import { showErrorToast } from "@/src/features/notifications/showErrorToast";
 import { useOptimisticMessages } from "./useOptimisticMessages";
 
+const NEXT_PATH = env.NEXT_PUBLIC_BASE_PATH as string;
+
 /**
  * Streams tokens from the assistant chat endpoint, calling `onToken` as each
  * chunk arrives.  Returns the conversation ID from the response headers.
@@ -22,15 +24,12 @@ async function fetchStreamingResponse({
   signal: AbortSignal;
   onToken: (accumulated: string) => void;
 }): Promise<string | undefined> {
-  const result = await fetch(
-    `${env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/assistant/chat`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ projectId, conversationId, content }),
-      signal,
-    },
-  );
+  const result = await fetch(`${NEXT_PATH}/api/assistant/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ projectId, conversationId, content }),
+    signal,
+  });
 
   if (!result.ok) {
     const errorData = await result.json();
@@ -73,8 +72,10 @@ export function useAssistantChat({ projectId }: { projectId: string }) {
   );
 
   const utils = api.useUtils();
-  const conversationsQuery = api.assistant.list.useQuery({ projectId });
-  const deleteMutation = api.assistant.delete.useMutation();
+  const conversationsQuery = api.assistant.listConversations.useQuery({
+    projectId,
+  });
+  const deleteMutation = api.assistant.deleteConversation.useMutation();
 
   const {
     messages,

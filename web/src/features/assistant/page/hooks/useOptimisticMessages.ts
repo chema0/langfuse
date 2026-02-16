@@ -73,7 +73,7 @@ export function useOptimisticMessages({
 
   const utils = api.useUtils();
 
-  const conversationQuery = api.assistant.byId.useQuery(
+  const conversationQuery = api.assistant.getConversationById.useQuery(
     { projectId, conversationId: conversationId ?? "" },
     { enabled: !!conversationId },
   );
@@ -118,11 +118,11 @@ export function useOptimisticMessages({
   const invalidateCache = useCallback(
     async (resolvedConversationId: string) => {
       await Promise.all([
-        utils.assistant.byId.invalidate({
+        utils.assistant.getConversationById.invalidate({
           projectId,
           conversationId: resolvedConversationId,
         }),
-        utils.assistant.list.invalidate({ projectId }),
+        utils.assistant.listConversations.invalidate({ projectId }),
       ]);
     },
     [projectId, utils],

@@ -276,30 +276,3 @@ The LLM client (`fetchAssistantResponse`) is mocked via `jest.mock()` — tests 
 | EmptyState | suggestions rendering and click | Suggestion buttons render and fire callback with suggestion text |
 
 **`assistant-utils.clienttest.ts`** (5 tests) — Tests the `generateTitle` and `formatTimestamp` utility functions. Straightforward input/output validation.
-
-## Files Modified/Created
-
-### New files:
-- `web/src/features/assistant/page/index.tsx`
-- `web/src/features/assistant/page/components/ConversationMessage.tsx`
-- `web/src/features/assistant/page/components/MessageInput.tsx`
-- `web/src/features/assistant/page/components/ConversationList.tsx`
-- `web/src/features/assistant/page/components/EmptyState.tsx`
-- `web/src/features/assistant/page/hooks/useAssistantChat.ts`
-- `web/src/features/assistant/page/hooks/useOptimisticMessages.ts`
-- `web/src/features/assistant/server/assistantRouter.ts`
-- `web/src/features/assistant/server/llmClient.ts`
-- `web/src/features/assistant/server/service.ts`
-- `web/src/features/assistant/utils.ts`
-- `web/src/app/api/assistant/chat/route.ts` — Streaming API endpoint
-- `web/src/pages/project/[projectId]/assistant.tsx`
-- `web/src/__tests__/async/assistant-api.servertest.ts` — Backend tRPC tests
-- `web/src/__tests__/assistant-ui.clienttest.tsx` — Component tests (React Testing Library)
-- `web/src/__tests__/assistant-utils.clienttest.ts` — Utility function tests
-- `ASSISTANT_README.md`
-- `packages/shared/prisma/migrations/[timestamp]_add_conversation_models/migration.sql`
-
-### Modified files:
-- `packages/shared/prisma/schema.prisma` — Added `Conversation` and `ConversationMessage` models
-- `web/src/server/api/root.ts` — Registered `assistantRouter`
-- `web/src/components/layouts/routes.tsx` — Added sidebar entry with `MessageCircle` icon
